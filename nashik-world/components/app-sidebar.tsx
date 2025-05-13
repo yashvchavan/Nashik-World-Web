@@ -2,8 +2,10 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Home, AlertTriangle, BarChart3, Map, Trophy, User, LogOut } from "lucide-react"
+import { Home, AlertTriangle, BarChart3, Map, Trophy, User, LogOut, LogIn } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
+import { useAuth } from "@/components/auth-provider"
+import { AuthDialog } from "@/components/auth-dialog"
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +26,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 export function AppSidebar() {
   const pathname = usePathname()
   const { t } = useTranslation()
+  const { user, logout } = useAuth()
 
   const navItems = [
     { href: "/", label: t("home"), icon: Home },
@@ -31,7 +34,7 @@ export function AppSidebar() {
     { href: "/dashboard", label: t("issueDashboard"), icon: Map },
     { href: "/transparency", label: t("transparencyDashboard"), icon: BarChart3 },
     { href: "/gamification", label: t("gamification"), icon: Trophy },
-    { href: "/profile", label: t("profile"), icon: User },
+    ...(user ? [{ href: "/profile", label: t("profile"), icon: User }] : []),
   ]
 
   return (
@@ -73,10 +76,14 @@ export function AppSidebar() {
           <LanguageSwitcher />
           <ThemeToggle />
         </div>
-        <Button variant="outline" className="w-full justify-start">
-          <LogOut className="mr-2 h-4 w-4" />
-          {t("logout")}
-        </Button>
+        {user ? (
+          <Button variant="outline" className="w-full justify-start" onClick={() => logout()}>
+            <LogOut className="mr-2 h-4 w-4" />
+            {t("logout")}
+          </Button>
+        ) : (
+          <AuthDialog />
+        )}
       </SidebarFooter>
     </Sidebar>
   )

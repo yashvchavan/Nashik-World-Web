@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { LanguageProvider } from "@/components/language-provider"
+import { AuthProvider } from "@/components/auth-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,14 +24,16 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <LanguageProvider>
-            <SidebarProvider>
-              <div className="flex min-h-screen w-full">
-                <AppSidebar />
-                <main className="flex-1 overflow-x-hidden w-full">{children}</main>
-              </div>
-            </SidebarProvider>
-          </LanguageProvider>
+          <AuthProvider>
+            <LanguageProvider>
+              <SidebarProvider>
+                <div className="flex min-h-screen w-full">
+                  <AppSidebar />
+                  <main className="flex-1 overflow-x-hidden w-full">{children}</main>
+                </div>
+              </SidebarProvider>
+            </LanguageProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
