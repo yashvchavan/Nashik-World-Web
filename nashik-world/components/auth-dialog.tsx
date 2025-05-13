@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { LogIn } from "lucide-react"
 import { useAuth } from "./auth-provider"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
@@ -41,43 +42,58 @@ export function AuthDialog() {
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full justify-start">
-          {t("login")}
+          <LogIn className="mr-2 h-4 w-4" />
+          Login
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>{isRegister ? t("register") : t("login")}</DialogTitle>
-          <DialogDescription>
-            {isRegister ? t("createAccount") : t("loginToAccount")}
+          <DialogTitle className="text-2xl font-bold text-center">
+            {isRegister ? "Register" : "Login"}
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {isRegister ? "Create a new account to continue" : "Welcome back! Please login to continue"}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            type="email"
-            placeholder={t("email")}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <Input
-            type="password"
-            placeholder={t("password")}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <Button type="submit" className="w-full">
-            {isRegister ? t("register") : t("login")}
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-11"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-11"
+              required
+            />
+          </div>
+          {error && (
+            <p className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">
+              {error}
+            </p>
+          )}
+          <Button type="submit" className="w-full h-11 text-base font-semibold">
+            {isRegister ? "Register" : "Login"}
           </Button>
-          <Button
-            type="button"
-            variant="link"
-            className="w-full"
-            onClick={() => setIsRegister(!isRegister)}
-          >
-            {isRegister ? t("alreadyHaveAccount") : t("needAccount")}
-          </Button>
+          <div className="text-center">
+            <Button
+              type="button"
+              variant="link"
+              className="text-sm"
+              onClick={() => setIsRegister(!isRegister)}
+            >
+              {isRegister ? "Already have an account? Login" : "New user? Register"}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
