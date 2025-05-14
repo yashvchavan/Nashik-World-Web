@@ -8,9 +8,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useTranslation } from "@/components/language-provider"
+import { useAuth } from "@/components/auth-provider"
+import { useToast } from "@/components/ui/use-toast"
+import { createIssue, updateIssueStatus } from "@/lib/issues"
+import { uploadToCloudinary } from "@/lib/cloudinary"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { IssueType, IssueStatus } from "@/types/issue"
 
 type ReportIssueModalProps = {
   isOpen: boolean
@@ -25,13 +30,18 @@ type IssueCategory = {
 
 export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const { toast } = useToast()
   const [step, setStep] = useState(1)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [description, setDescription] = useState("")
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [address, setAddress] = useState("")
   const [isUsingGPS, setIsUsingGPS] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [transactionId, setTransactionId] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const categories: IssueCategory[] = [
     {
@@ -90,12 +100,55 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
     },
   ]
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please sign in to report an issue"
+      })
+      return
+    }
+
     if (step < 4) {
       setStep(step + 1)
-    } else {
-      // Submit the issue
-      setTransactionId("0x" + Math.random().toString(16).substr(2, 16))
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+
+      // Create the issue first
+      const issue = await createIssue(user.uid, {
+        type: selectedCategory as IssueType,
+        description,
+        location: address,
+        coordinates: location!,
+        status: "open",
+        images: [],
+        address,
+        ward: "auto",
+      })      // Handle image upload if provided
+      if (imageFile) {
+        try {
+          const imageUrl = await uploadToCloudinary(imageFile)
+          await updateIssueStatus(issue.id, "open", "Added issue image", [imageUrl])
+        } catch (uploadError) {
+          console.error("Error uploading image:", uploadError)
+          toast({
+            title: "Warning",
+            description: "Issue created but image upload failed. Please try again later.",
+            variant: "destructive"
+          })
+        }
+      }
+
+      setTransactionId(issue.id)
+      toast({
+        title: "Success",
+        description: "Issue reported successfully!"
+      })
+
       // Close after a delay to show the success state
       setTimeout(() => {
         onClose()
@@ -103,9 +156,21 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
         setSelectedCategory(null)
         setDescription("")
         setLocation(null)
+        setAddress("")
         setUploadedImage(null)
+        setImageFile(null)
         setTransactionId(null)
       }, 3000)
+
+    } catch (error) {
+      console.error("Error reporting issue:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to report issue. Please try again."
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -119,20 +184,44 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
     setIsUsingGPS(true)
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
+        async (position) => {
+          const coords = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          })
+          }
+          setLocation(coords)
+          
+          // Get address from coordinates using reverse geocoding
+          try {
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.lat},${coords.lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+            )
+            const data = await response.json()
+            if (data.results?.[0]) {
+              setAddress(data.results[0].formatted_address)
+            }
+          } catch (error) {
+            console.error("Error getting address:", error)
+          }
+          
           setIsUsingGPS(false)
         },
         (error) => {
           console.error("Error getting location:", error)
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to get your location. Please try again or enter it manually."
+          })
           setIsUsingGPS(false)
         },
       )
     } else {
-      alert("Geolocation is not supported by this browser.")
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Geolocation is not supported by your browser."
+      })
       setIsUsingGPS(false)
     }
   }
@@ -140,11 +229,15 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      // Preview the image
       const reader = new FileReader()
       reader.onloadend = () => {
         setUploadedImage(reader.result as string)
       }
       reader.readAsDataURL(file)
+      
+      // Store the file for later upload
+      setImageFile(file)
     }
   }
 

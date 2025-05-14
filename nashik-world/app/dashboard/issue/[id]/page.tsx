@@ -1,5 +1,6 @@
 "use client"
 
+import { use } from "react"
 import { useTranslation } from "@/components/language-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,9 +12,10 @@ import { ArrowLeft, MessageCircle, ThumbsUp, Upload } from "lucide-react"
 import Link from "next/link"
 import { Textarea } from "@/components/ui/textarea"
 
-export default function IssueDetailPage({ params }: { params: { id: string } }) {
+export default function IssueDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { t } = useTranslation()
-  const issueId = Number.parseInt(params.id)
+  const resolvedParams = use(params)
+  const issueId = Number.parseInt(resolvedParams.id)
 
   // Mock data - in a real app, fetch this based on the ID
   const issue = {

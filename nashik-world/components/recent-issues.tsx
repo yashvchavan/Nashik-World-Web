@@ -1,55 +1,51 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useTranslation } from "@/components/language-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import Link from "next/link"
+import { getAllIssues } from "@/lib/issues"
+import type { Issue } from "@/types/issue"
 
 export function RecentIssues() {
   const { t } = useTranslation()
+  const [recentIssues, setRecentIssues] = useState<Issue[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock data
-  const recentIssues = [
-    {
-      id: 1,
-      type: "pothole",
-      location: "Gangapur Road, near City Center Mall",
-      status: "open",
-      reportedOn: "2023-05-10T10:30:00",
-    },
-    {
-      id: 2,
-      type: "waterLeak",
-      location: "College Road, opposite ABB Circle",
-      status: "inProgress",
-      reportedOn: "2023-05-09T14:15:00",
-    },
-    {
-      id: 3,
-      type: "fallenTree",
-      location: "Mahatma Nagar, near Sharanpur Road",
-      status: "resolved",
-      reportedOn: "2023-05-08T09:45:00",
-    },
-  ]
+  useEffect(() => {
+    async function loadIssues() {
+      try {
+        setLoading(true)
+        setError(null)
+        const issues = await getAllIssues(5) // Load 5 most recent issues
+        setRecentIssues(issues)
+      } catch (err) {
+        console.error("Error loading issues:", err)
+        setError("Failed to load recent issues")
+      } finally {
+        setLoading(false)
+      }
+    }
 
+    loadIssues()
+  }, [])
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "open":
         return "default"
       case "inProgress":
-        return "warning"
+        return "secondary"
       case "resolved":
-        return "success"
+        return "outline"
       default:
         return "secondary"
     }
   }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+  const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en-US", {
       day: "numeric",
       month: "short",
@@ -72,28 +68,46 @@ export function RecentIssues() {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {recentIssues.map((issue) => (
-            <div
-              key={issue.id}
-              className="flex flex-col gap-2 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium">{t(issue.type)}</h3>
-                  <Badge variant={getStatusBadgeVariant(issue.status) as any}>{t(issue.status)}</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">{issue.location}</p>
-                <p className="text-xs text-muted-foreground">
-                  {t("reportedOn")}: {formatDate(issue.reportedOn)}
-                </p>
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="animate-pulse">
+                <div className="h-20 rounded-lg border bg-muted" />
               </div>
-              <Button asChild size="sm" variant="outline">
-                <Link href={`/dashboard/issue/${issue.id}`}>{t("viewDetails")}</Link>
-              </Button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-4 text-muted-foreground">
+            {error}
+          </div>
+        ) : recentIssues.length === 0 ? (
+          <div className="text-center py-4 text-muted-foreground">
+            No issues reported yet
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {recentIssues.map((issue) => (
+              <div
+                key={issue.id}
+                className="flex flex-col gap-2 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium">{t(issue.type)}</h3>
+                    <Badge variant={getStatusBadgeVariant(issue.status)}>{t(issue.status)}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{issue.location}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("reportedOn")}: {formatDate(issue.reportedOn)}
+                  </p>
+                </div>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/dashboard/issue/${issue.id}`}>{t("viewDetails")}</Link>
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

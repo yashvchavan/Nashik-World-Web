@@ -1,12 +1,7 @@
-import type React from "react"
-import type { Metadata } from "next"
+import { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
-import { LanguageProvider } from "@/components/language-provider"
-import { AuthProvider } from "@/components/auth-provider"
+import { RootLayoutClient } from "./layout-client"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -15,27 +10,16 @@ export const metadata: Metadata = {
   description: "A platform for citizens of Nashik to report and track civic issues",
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
+interface RootLayoutProps {
   children: React.ReactNode
-}>) {
+}
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <AuthProvider>
-            <LanguageProvider>
-              <SidebarProvider>
-                <div className="flex min-h-screen w-full">
-                  <AppSidebar />
-                  <main className="flex-1 overflow-x-hidden w-full">{children}</main>
-                </div>
-              </SidebarProvider>
-            </LanguageProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </body>
+      <RootLayoutClient inter={inter.className}>
+        {children}
+      </RootLayoutClient>
     </html>
   )
 }
