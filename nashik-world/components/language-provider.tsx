@@ -286,6 +286,66 @@ const translations: Translations = {
     hi: "अगला",
     mr: "पुढे",
   },
+  deletePhoto: {
+    en: "Delete Photo",
+    hi: "फोटो हटाएं",
+    mr: "फोटो डिलीट करा",
+  },
+  deletePhotoConfirmation: {
+    en: "Are you sure you want to delete this photo? This action cannot be undone.",
+    hi: "क्या आप वाकई इस फोटो को हटाना चाहते हैं? यह क्रिया वापस नहीं ली जा सकती।",
+    mr: "तुम्हाला खात्री आहे की तुम्ही हा फोटो डिलीट करू इच्छिता? ही क्रिया पूर्ववत केली जाऊ शकत नाही.",
+  },
+  deleting: {
+    en: "Deleting...",
+    hi: "हटाया जा रहा है...",
+    mr: "डिलीट करत आहे...",
+  },
+  photoDeleted: {
+    en: "Photo deleted",
+    hi: "फोटो हटा दिया गया",
+    mr: "फोटो डिलीट केला",
+  },
+  photoDeletedSuccess: {
+    en: "Photo deleted successfully",
+    hi: "फोटो सफलतापूर्वक हटा दिया गया",
+    mr: "फोटो यशस्वीरित्या डिलीट केला",
+  },
+  photoDeleteError: {
+    en: "Failed to delete photo. Please try again.",
+    hi: "फोटो हटाने में विफल। कृपया पुनः प्रयास करें।",
+    mr: "फोटो डिलीट करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
+  },
+  cancel: {
+    en: "Cancel",
+    hi: "रद्द करें",
+    mr: "रद्द करा"
+  },
+  delete: {
+    en: "Delete",
+    hi: "हटाएं",
+    mr: "डिलीट करा"
+  },
+  deleteIssue: {
+    en: "Delete Issue",
+    hi: "समस्या हटाएं",
+    mr: "समस्या डिलीट करा"
+  },
+  deleteIssueConfirmation: {
+    en: "Are you sure you want to delete this issue? All associated photos and updates will be permanently deleted. This action cannot be undone.",
+    hi: "क्या आप वाकई इस समस्या को हटाना चाहते हैं? सभी संबंधित फोटो और अपडेट स्थायी रूप से हटा दिए जाएंगे। यह क्रिया वापस नहीं ली जा सकती।",
+    mr: "तुम्हाला खात्री आहे की तुम्ही ही समस्या डिलीट करू इच्छिता? सर्व संबंधित फोटो आणि अपडेट्स कायमचे डिलीट केले जातील. ही क्रिया पूर्ववत केली जाऊ शकत नाही."
+  },
+  issueDeleted: {
+    en: "Issue deleted successfully",
+    hi: "समस्या सफलतापूर्वक हटाई गई",
+    mr: "समस्या यशस्वीरित्या डिलीट केली"
+  },
+  issueDeleteError: {
+    en: "Failed to delete issue. Please try again.",
+    hi: "समस्या हटाने में विफल। कृपया पुनः प्रयास करें।",
+    mr: "समस्या डिलीट करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा."
+  },
 }
 
 type LanguageContextType = {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTranslation } from "@/components/language-provider"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,60 +11,32 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Filter, List, Map, Search } from "lucide-react"
 import { IssueMap } from "@/components/issue-map"
+import { subscribeToIssues } from "@/lib/issues"
+import type { Issue } from "@/types/issue"
+import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
   const { t } = useTranslation()
   const [view, setView] = useState<"list" | "map">("list")
   const [showFilters, setShowFilters] = useState(false)
+  const [issues, setIssues] = useState<Issue[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filters, setFilters] = useState({
+    status: "all",
+    category: "all",
+    radius: 5,
+    search: ""
+  })
 
-  // Mock data
-  const issues = [
-    {
-      id: 1,
-      type: "pothole",
-      description: "Large pothole causing traffic issues",
-      location: "Gangapur Road, near City Center Mall",
-      status: "open",
-      reportedOn: "2023-05-10T10:30:00",
-      coordinates: { lat: 19.9975, lng: 73.7898 },
-    },
-    {
-      id: 2,
-      type: "waterLeak",
-      description: "Water pipe leaking for past 3 days",
-      location: "College Road, opposite ABB Circle",
-      status: "inProgress",
-      reportedOn: "2023-05-09T14:15:00",
-      coordinates: { lat: 20.0025, lng: 73.7868 },
-    },
-    {
-      id: 3,
-      type: "fallenTree",
-      description: "Tree fallen after yesterday's storm",
-      location: "Mahatma Nagar, near Sharanpur Road",
-      status: "resolved",
-      reportedOn: "2023-05-08T09:45:00",
-      coordinates: { lat: 19.9925, lng: 73.7938 },
-    },
-    {
-      id: 4,
-      type: "garbage",
-      description: "Garbage not collected for a week",
-      location: "Ashok Stambh, near Old CBS",
-      status: "open",
-      reportedOn: "2023-05-07T16:20:00",
-      coordinates: { lat: 19.9985, lng: 73.7828 },
-    },
-    {
-      id: 5,
-      type: "streetlight",
-      description: "Street light not working for past 5 days",
-      location: "Satpur MIDC, near Ambad Link Road",
-      status: "inProgress",
-      reportedOn: "2023-05-06T11:10:00",
-      coordinates: { lat: 20.0055, lng: 73.7798 },
-    },
-  ]
+  useEffect(() => {
+    const unsubscribe = subscribeToIssues((newIssues) => {
+      setIssues(newIssues)
+      setLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [])
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -79,14 +51,44 @@ export default function DashboardPage() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+  const formatDate = (dateString: string | Date) => {
+    const date = typeof dateString === "string" ? new Date(dateString) : dateString
     return new Intl.DateTimeFormat("en-US", {
       day: "numeric",
       month: "short",
       hour: "numeric",
       minute: "numeric",
     }).format(date)
+  }
+
+  const filteredIssues = issues
+    .filter((issue) =>
+      filters.status === "all" ? true : issue.status === filters.status
+    )
+    .filter((issue) =>
+      filters.category === "all" ? true : issue.type === filters.category
+    )
+    .filter((issue) =>
+      filters.search
+        ? issue.description.toLowerCase().includes(filters.search.toLowerCase()) ||
+          issue.location.toLowerCase().includes(filters.search.toLowerCase())
+        : true
+    )
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col gap-4">
+          <div className="h-8 w-32 bg-muted rounded animate-pulse" />
+          <div className="h-12 w-full bg-muted rounded animate-pulse" />
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div key={n} className="h-[200px] bg-muted rounded animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -148,7 +150,10 @@ export default function DashboardPage() {
           <CardContent className="grid gap-4 p-4 sm:grid-cols-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">{t("status")}</label>
-              <Select>
+              <Select 
+                value={filters.status}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
@@ -162,7 +167,10 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">{t("category")}</label>
-              <Select>
+              <Select 
+                value={filters.category}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
@@ -180,7 +188,13 @@ export default function DashboardPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">{t("radius")}</label>
               <div className="px-2">
-                <Slider defaultValue={[5]} max={10} step={1} />
+                <Slider 
+                  defaultValue={[5]} 
+                  value={[filters.radius]}
+                  onValueChange={([value]) => setFilters(prev => ({ ...prev, radius: value }))}
+                  max={10} 
+                  step={1} 
+                />
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>1 km</span>
@@ -192,48 +206,70 @@ export default function DashboardPage() {
               <label className="text-sm font-medium">Search</label>
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search issues..." className="pl-8" />
+                <Input 
+                  placeholder="Search issues..." 
+                  className="pl-8" 
+                  value={filters.search}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                />
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Content */}
-      <div>
-        {view === "list" ? (
-          <div className="space-y-4">
-            {issues.map((issue) => (
-              <Card key={issue.id}>
-                <CardContent className="p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{t(issue.type)}</h3>
-                        <Badge variant={getStatusBadgeVariant(issue.status) as any}>{t(issue.status)}</Badge>
-                      </div>
-                      <p className="text-sm">{issue.description}</p>
-                      <p className="text-sm text-muted-foreground">{issue.location}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("reportedOn")}: {formatDate(issue.reportedOn)}
-                      </p>
+      {view === "list" ? (
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {filteredIssues.map((issue) => (
+            <Card key={issue.id} className="relative overflow-hidden">
+              {issue.images && issue.images.length > 0 && (
+                <div className="relative h-48">
+                  <img
+                    src={issue.images[0]}
+                    alt={t(issue.type)}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  {issue.images.length > 1 && (
+                    <Badge variant="secondary" className="absolute bottom-2 right-2">
+                      +{issue.images.length - 1}
+                    </Badge>
+                  )}
+                </div>
+              )}
+              <Link href={`/dashboard/issue/${issue.id}`}>
+                <CardContent className={cn(
+                  "p-6 space-y-4",
+                  !issue.images?.length && "pt-6"
+                )}>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline">{t(issue.type)}</Badge>
+                      <Badge variant={getStatusBadgeVariant(issue.status) as any}>{t(issue.status)}</Badge>
                     </div>
-                    <Button asChild size="sm">
-                      <a href={`/dashboard/issue/${issue.id}`}>{t("viewDetails")}</a>
-                    </Button>
+                    <h3 className="font-semibold leading-tight">{issue.location}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{issue.description}</p>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      {issue.reportedBy?.avatar ? (
+                        <img
+                          src={issue.reportedBy.avatar}
+                          alt={issue.reportedBy.name}
+                          className="h-6 w-6 rounded-full"
+                        />
+                      ) : null}
+                      <span>{issue.reportedBy?.name || "Anonymous"}</span>
+                    </div>
+                    <time dateTime={issue.reportedOn.toString()}>{formatDate(issue.reportedOn)}</time>
                   </div>
                 </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <Card className="overflow-hidden">
-            <CardContent className="p-0">
-              <IssueMap issues={issues} />
-            </CardContent>
-          </Card>
-        )}
-      </div>
+              </Link>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <IssueMap issues={filteredIssues} />
+      )}
     </div>
   )
 }

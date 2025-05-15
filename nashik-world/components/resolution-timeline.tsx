@@ -4,15 +4,15 @@ import { useTranslation } from "@/components/language-provider"
 import { CheckCircle2, Clock, AlertCircle } from "lucide-react"
 
 interface Issue {
-  id: number
+  id: string
   type: string
   location: string
   status: string
-  reportedOn: string
-  assignedTo: string
-  estimatedResolution: string
-  startedOn?: string
-  resolvedOn?: string
+  reportedOn: Date | string
+  assignedTo?: string
+  estimatedResolution?: Date | string
+  startedOn?: Date | string
+  resolvedOn?: Date | string
 }
 
 interface ResolutionTimelineProps {
@@ -21,9 +21,8 @@ interface ResolutionTimelineProps {
 
 export function ResolutionTimeline({ issue }: ResolutionTimelineProps) {
   const { t } = useTranslation()
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+  const formatDate = (dateInput: Date | string) => {
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
     return new Intl.DateTimeFormat("en-US", {
       day: "numeric",
       month: "short",
@@ -84,7 +83,7 @@ export function ResolutionTimeline({ issue }: ResolutionTimelineProps) {
           {issue.resolvedOn ? (
             <p className="text-sm text-muted-foreground">{formatDate(issue.resolvedOn)}</p>
           ) : (
-            <p className="text-sm text-muted-foreground">Estimated: {formatDate(issue.estimatedResolution)}</p>
+            <p className="text-sm text-muted-foreground">Estimated: {issue.estimatedResolution && formatDate(issue.estimatedResolution)}</p>
           )}
         </div>
       </div>

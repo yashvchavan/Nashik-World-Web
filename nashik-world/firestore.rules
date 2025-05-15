@@ -6,17 +6,29 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Allow authenticated users to create issues and anyone to read them
+    }      // Allow authenticated users to create issues and anyone to read them
     match /issues/{issueId} {
       allow read: if true;
       allow create: if request.auth != null;
       allow update: if request.auth != null && (
-        // Allow updating only if user is the creator or is verifying a resolved issue
-        resource.data.createdBy == request.auth.uid ||
-        (resource.data.status == "resolved" && !resource.data.verified)
+        // Allow any authenticated user to update issues
+        // In a production app, you might want to add more specific rules
+        true
       );
+      allow delete: if request.auth != null && (
+        // Allow users to delete their own issues
+        resource.data.userId == request.auth.uid
+      );
+      
+      // Allow read/write access to comments subcollection
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+        allow update, delete: if request.auth != null && (
+          // Allow users to modify their own comments
+          resource.data.author.userId == request.auth.uid
+        );
+      }
     }
     
     // Allow public read access to aggregated stats

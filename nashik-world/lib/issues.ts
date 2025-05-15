@@ -7,17 +7,22 @@ import {
   where, 
   addDoc, 
   updateDoc,
+  deleteDoc,
   orderBy,
   serverTimestamp,
   Timestamp,
   increment as firestoreIncrement,
   FieldValue,
   limit,
-  arrayUnion
+  arrayUnion,
+  arrayRemove,
+  onSnapshot
 } from "firebase/firestore"
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { db, storage } from "./firebase"
-import type { Issue, IssueStatus, IssueFirestore, IssueUpdate } from "@/types/issue"
+import { deleteFromCloudinary } from "./cloudinary"
+import { checkOnlineStatus } from "./utils"
+import type { Issue, IssueStatus, IssueFirestore, IssueUpdate, IssueComment } from "@/types/issue"
 import { updateUserProfile } from "./user"
 import type { UserProfileUpdate } from "@/types/user"
 
@@ -213,4 +218,132 @@ export async function getAllIssues(limitCount: number = 10) {
       }))
     } as Issue
   })
+}
+
+export async function updateIssue(issueId: string, updates: Partial<Issue>) {
+  await checkOnlineStatus()
+  
+  try {
+    const issueRef = doc(db, 'issues', issueId)
+    await updateDoc(issueRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    })
+  } catch (error: any) {
+    console.error('Error updating issue:', error)
+    if (error.code === 'permission-denied') {
+      throw new Error('You do not have permission to update this issue.')
+    }
+    throw new Error('Failed to update issue. Please try again.')
+  }
+}
+
+export async function deleteIssuePhoto(issueId: string, imageUrl: string, userId?: string) {
+  await checkOnlineStatus()
+
+  try {
+    const issueRef = doc(db, 'issues', issueId)
+    
+    // Delete from Cloudinary first
+    await deleteFromCloudinary(imageUrl)
+    
+    // Update the issue document
+    await updateDoc(issueRef, {
+      images: arrayRemove(imageUrl),
+      updates: arrayUnion({
+        date: new Date(),
+        status: 'open',
+        comment: 'Photo deleted',
+        author: userId,
+      }),
+      updatedAt: serverTimestamp()
+    })
+  } catch (error: any) {
+    console.error('Error deleting issue photo:', error)
+    if (error.code === 'permission-denied') {
+      throw new Error('You do not have permission to delete photos from this issue.')
+    }
+    throw new Error('Failed to delete photo. Please try again.')
+  }
+}
+
+export async function deleteIssue(issueId: string) {
+  await checkOnlineStatus()
+
+  try {
+    const issueRef = doc(db, 'issues', issueId)
+    
+    // Get the issue first to delete associated images
+    const issue = await getIssueById(issueId)
+    if (issue?.images?.length) {
+      // Delete all images from Cloudinary
+      await Promise.all(issue.images.map(imageUrl => deleteFromCloudinary(imageUrl)))
+    }
+    
+    // Delete the issue document
+    await deleteDoc(issueRef)
+  } catch (error: any) {
+    console.error('Error deleting issue:', error)
+    if (error.code === 'permission-denied') {
+      throw new Error('You do not have permission to delete this issue.')
+    }
+    throw new Error('Failed to delete issue. Please try again.')
+  }
+}
+
+// Real-time listeners for issues
+export function subscribeToIssues(callback: (issues: Issue[]) => void) {
+  const issuesRef = collection(db, "issues")
+  const q = query(issuesRef, orderBy("reportedOn", "desc"))
+  
+  return onSnapshot(q, (snapshot) => {
+    const issues = snapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        ...data,
+        id: doc.id,
+        reportedOn: data.reportedOn.toDate(),
+        resolvedOn: data.resolvedOn ? data.resolvedOn.toDate() : undefined,
+        updates: data.updates.map((update: any) => ({
+          ...update,
+          date: update.date.toDate()
+        }))
+      } as Issue
+    })
+    callback(issues)
+  })
+}
+
+export function subscribeToComments(issueId: string, callback: (comments: IssueComment[]) => void) {
+  const commentsRef = collection(db, "issues", issueId, "comments")
+  const q = query(commentsRef, orderBy("date", "desc"))
+  
+  return onSnapshot(q, (snapshot) => {
+    const comments = snapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...data,
+        date: data.date.toDate()
+      } as IssueComment
+    })
+    callback(comments)
+  })
+}
+
+export async function addComment(issueId: string, comment: Omit<IssueComment, "id" | "date">) {
+  const commentsRef = collection(db, "issues", issueId, "comments")
+  
+  try {
+    await addDoc(commentsRef, {
+      ...comment,
+      date: serverTimestamp()
+    })
+  } catch (error: any) {
+    console.error('Error adding comment:', error)
+    if (error.code === 'permission-denied') {
+      throw new Error('You do not have permission to comment on this issue.')
+    }
+    throw new Error('Failed to add comment. Please try again.')
+  }
 }

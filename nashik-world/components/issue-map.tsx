@@ -3,24 +3,13 @@
 import { useEffect, useRef } from "react"
 import { useTranslation } from "@/components/language-provider"
 
-interface Issue {
-  id: number
-  type: string
-  description: string
-  location: string
-  status: string
-  reportedOn: string
-  coordinates: {
-    lat: number
-    lng: number
-  }
-}
+import type { Issue as FirestoreIssue } from "@/types/issue"
 
 interface IssueMapProps {
-  issues: Issue[]
+  issues: FirestoreIssue[]
 }
 
-export function IssueMap({ issues }: IssueMapProps) {
+export function IssueMap({ issues }: { issues: FirestoreIssue[] }) {
   const { t } = useTranslation()
   const mapRef = useRef<HTMLDivElement>(null)
 

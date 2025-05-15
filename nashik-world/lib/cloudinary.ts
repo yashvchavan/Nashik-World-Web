@@ -24,4 +24,35 @@ const uploadToCloudinary = async (file: File, options: { folder?: string; public
   }
 }
 
-export { uploadToCloudinary }
+const deleteFromCloudinary = async (imageUrl: string): Promise<void> => {
+  try {
+    // Extract the public_id from the URL
+    // URL format: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/folder/public_id.extension
+    const urlParts = imageUrl.split('/')
+    const publicId = urlParts[urlParts.length - 1].split('.')[0]
+    
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/destroy`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          public_id: publicId,
+          upload_preset: 'nashik-world'
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error('Failed to delete image')
+    }
+  } catch (error) {
+    console.error('Error deleting from Cloudinary:', error)
+    // Don't throw here - we want to continue with Firestore update even if Cloudinary delete fails
+    // The image might already be deleted or the URL might be invalid
+  }
+}
+
+export { uploadToCloudinary, deleteFromCloudinary }
