@@ -110,38 +110,50 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
       return
     }
 
+    // Return early if we're not on the final step
     if (step < 4) {
       setStep(step + 1)
       return
     }
 
+    // Prevent double submission
+    if (isSubmitting) return
+
     try {
       setIsSubmitting(true)
+      let imageUrl: string | undefined
 
-      // Create the issue first
+      // Upload image first if provided
+      if (imageFile) {
+        try {
+          imageUrl = await uploadToCloudinary(imageFile)
+        } catch (uploadError) {
+          console.error("Error uploading image:", uploadError)
+          toast({
+            title: "Warning",
+            description: "Image upload failed, please try again.",
+            variant: "destructive"
+          })
+          setIsSubmitting(false)
+          return
+        }
+      }
+
+      // Create the issue with all data at once
       const issue = await createIssue(user.uid, {
         type: selectedCategory as IssueType,
         description,
         location: address,
         coordinates: location!,
         status: "open",
-        images: [],
+        images: imageUrl ? [imageUrl] : [],
         address,
         ward: "auto",
-      })      // Handle image upload if provided
-      if (imageFile) {
-        try {
-          const imageUrl = await uploadToCloudinary(imageFile)
-          await updateIssueStatus(issue.id, "open", "Added issue image", [imageUrl])
-        } catch (uploadError) {
-          console.error("Error uploading image:", uploadError)
-          toast({
-            title: "Warning",
-            description: "Issue created but image upload failed. Please try again later.",
-            variant: "destructive"
-          })
+        reportedBy: {
+          name: user.displayName || "Anonymous",
+          ...(user.photoURL ? { avatar: user.photoURL } : {})
         }
-      }
+      })
 
       setTransactionId(issue.id)
       toast({
@@ -152,6 +164,7 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
       // Close after a delay to show the success state
       setTimeout(() => {
         onClose()
+        // Reset all state
         setStep(1)
         setSelectedCategory(null)
         setDescription("")

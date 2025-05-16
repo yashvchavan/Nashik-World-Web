@@ -1,3 +1,5 @@
+import { getAuth } from "firebase/auth"
+
 const uploadToCloudinary = async (file: File, options: { folder?: string; publicId?: string } = {}): Promise<string> => {
   try {
     const formData = new FormData()
@@ -26,11 +28,16 @@ const uploadToCloudinary = async (file: File, options: { folder?: string; public
 
 const deleteFromCloudinary = async (imageUrl: string): Promise<void> => {
   try {
-    // Extract the public_id from the URL
-    // URL format: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/folder/public_id.extension
-    const urlParts = imageUrl.split('/')
-    const publicId = urlParts[urlParts.length - 1].split('.')[0]
+    // Extract path from URL
+    const urlPath = new URL(imageUrl).pathname
+    const matches = urlPath.match(/\/([^/]+)\/upload\/(?:v\d+\/)?(.+)$/)
+    if (!matches) {
+      throw new Error('Invalid Cloudinary URL format')
+    }
     
+    const [, cloudName, publicIdWithExt] = matches
+    const publicId = publicIdWithExt.split('.')[0]
+
     const response = await fetch(
       `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/destroy`,
       {
@@ -40,7 +47,9 @@ const deleteFromCloudinary = async (imageUrl: string): Promise<void> => {
         },
         body: JSON.stringify({
           public_id: publicId,
-          upload_preset: 'nashik-world'
+          upload_preset: 'nashik-world',
+          api_key: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
+          timestamp: Math.floor(Date.now() / 1000).toString()
         }),
       }
     )

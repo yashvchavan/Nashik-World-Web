@@ -30,12 +30,22 @@ export async function createIssue(userId: string, issueData: Omit<Issue, "id" | 
   const issuesRef = collection(db, "issues")
   const now = new Date()
   
-  const issue = {
+  // Get user details directly from user document
+  const userRef = doc(db, "users", userId)
+  const userSnap = await getDoc(userRef)
+  const userData = userSnap.data()
+    const issue = {
     ...issueData,
     userId,
     reportedOn: serverTimestamp(),
     verified: false,
     upvotes: 0,
+    reportedBy: {
+      name: (issueData.reportedBy?.name || userData?.displayName) ?? "Anonymous",
+      ...(issueData.reportedBy?.avatar || userData?.photoURL ? {
+        avatar: issueData.reportedBy?.avatar || userData?.photoURL
+      } : {})
+    },
     updates: [{
       date: now,  // Use regular Date for array
       status: issueData.status,
