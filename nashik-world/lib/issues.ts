@@ -25,6 +25,7 @@ import { checkOnlineStatus } from "./utils"
 import type { Issue, IssueStatus, IssueFirestore, IssueUpdate, IssueComment } from "@/types/issue"
 import { updateUserProfile } from "./user"
 import type { UserProfileUpdate } from "@/types/user"
+import { CIVIC_POINTS } from "./constants"
 
 export async function createIssue(userId: string, issueData: Omit<Issue, "id" | "userId" | "reportedOn" | "verified" | "upvotes" | "updates">) {
   const issuesRef = collection(db, "issues")
@@ -34,7 +35,7 @@ export async function createIssue(userId: string, issueData: Omit<Issue, "id" | 
   const userRef = doc(db, "users", userId)
   const userSnap = await getDoc(userRef)
   const userData = userSnap.data()
-    const issue = {
+  const issue = {
     ...issueData,
     userId,
     reportedOn: serverTimestamp(),
@@ -55,9 +56,10 @@ export async function createIssue(userId: string, issueData: Omit<Issue, "id" | 
 
   const docRef = await addDoc(issuesRef, issue)
 
-  // Update user's issue count
+  // Update user's issue count and points
   await updateUserProfile(userId, {
-    issuesReported: firestoreIncrement(1)
+    issuesReported: firestoreIncrement(1),
+    points: firestoreIncrement(CIVIC_POINTS.REPORT_ISSUE)
   } as UserProfileUpdate)
 
   return {
@@ -349,11 +351,56 @@ export async function addComment(issueId: string, comment: Omit<IssueComment, "i
       ...comment,
       date: serverTimestamp()
     })
+
+    // Award points for commenting
+    await updateUserProfile(comment.author.userId, {
+      points: firestoreIncrement(CIVIC_POINTS.COMMENT)
+    } as UserProfileUpdate)
   } catch (error: any) {
     console.error('Error adding comment:', error)
     if (error.code === 'permission-denied') {
       throw new Error('You do not have permission to comment on this issue.')
     }
     throw new Error('Failed to add comment. Please try again.')
+  }
+}
+
+export async function upvoteIssue(issueId: string, userId: string) {
+  const issueRef = doc(db, "issues", issueId)
+  const issue = await getIssueById(issueId)
+  
+  if (!issue) throw new Error("Issue not found")
+
+  try {
+    // Check if user already upvoted
+    const upvotesRef = collection(db, "issues", issueId, "upvotes")
+    const upvoteQuery = query(upvotesRef, where("userId", "==", userId))
+    const upvoteSnapshot = await getDocs(upvoteQuery)
+
+    if (!upvoteSnapshot.empty) {
+      throw new Error("You have already upvoted this issue")
+    }
+
+    // Add upvote record
+    await addDoc(upvotesRef, {
+      userId,
+      date: serverTimestamp()
+    })
+
+    // Increment issue upvote count
+    await updateDoc(issueRef, {
+      upvotes: firestoreIncrement(1)
+    })
+
+    // Award points to issue reporter
+    await updateUserProfile(issue.userId, {
+      points: firestoreIncrement(CIVIC_POINTS.UPVOTE)
+    } as UserProfileUpdate)
+
+  } catch (error: any) {
+    if (error.code === 'permission-denied') {
+      throw new Error('You do not have permission to upvote this issue.')
+    }
+    throw error
   }
 }

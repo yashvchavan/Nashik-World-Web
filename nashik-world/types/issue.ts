@@ -52,6 +52,11 @@ export interface Issue {
   urgency?: IssueUrgency
 }
 
+export interface IssueUpvote {
+  userId: string
+  date: Date
+}
+
 export interface IssueFirestore extends Omit<Issue, 'reportedOn' | 'resolvedOn' | 'updates'> {
   reportedOn: Date | FieldValue
   resolvedOn?: Date | FieldValue
