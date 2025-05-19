@@ -1,12 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
-  match /databases/{database}/documents {
-    // Allow users to read and write their own profile
+  match /databases/{database}/documents {    // Allow users to read and write their own profile, and allow leaderboard queries
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null;  // Allow authenticated users to read any profile for leaderboard
       allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if request.auth != null && request.auth.uid == userId;
-    }      // Allow authenticated users to create issues and anyone to read them
+      
+      // Add rule to allow listing users for leaderboard
+      allow list: if request.auth != null &&
+        // Only allow querying by points for leaderboard
+        (request.query.orderBy == "points" || 
+         request.query.orderBy == null);
+    }// Allow authenticated users to create issues and anyone to read them
     match /issues/{issueId} {
       allow read: if true;
       allow create: if request.auth != null;

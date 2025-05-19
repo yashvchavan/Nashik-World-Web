@@ -7,7 +7,13 @@ import {
   Timestamp,
   FieldValue,
   enableNetwork,
-  disableNetwork
+  disableNetwork,
+  collection,
+  query,
+  orderBy,
+  limit,
+  where,
+  getDocs
 } from "firebase/firestore"
 import { db } from "./firebase"
 import { uploadToCloudinary } from "./cloudinary"
@@ -109,4 +115,37 @@ export async function uploadProfileImage(userId: string, file: File) {
     console.error('Error uploading to Cloudinary:', error)
     throw new Error('Failed to upload profile image. Please try again.')
   }
+}
+
+export async function getLeaderboard(limitCount: number = 10) {
+  await checkOnlineStatus()
+  const usersRef = collection(db, "users")
+  const q = query(
+    usersRef,
+    orderBy("points", "desc"),
+    limit(limitCount)
+  )
+  
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map(doc => {
+    const data = doc.data()
+    return {
+      id: doc.id,
+      name: data.name || "Anonymous",
+      points: data.points || 0,
+      avatar: data.avatar,
+    }
+  })
+}
+
+export async function getUserRank(userId: string, points: number): Promise<number> {
+  await checkOnlineStatus()
+  const usersRef = collection(db, "users")
+  const q = query(
+    usersRef,
+    where("points", ">", points)
+  )
+  
+  const snapshot = await getDocs(q)
+  return snapshot.size + 1 // Rank is number of users with more points + 1
 }

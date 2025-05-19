@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useTranslation } from "@/components/language-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -7,33 +8,117 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, Trophy, Users } from "lucide-react"
+import { useAuth } from "@/components/auth-provider"
+import { getUserProfile, getLeaderboard, getUserRank } from "@/lib/user"
+import { calculateLevel } from "@/lib/constants"
+import { useToast } from "@/components/ui/use-toast"
+import type { UserProfile } from "@/types/user"
+
+interface LeaderboardUser {
+  id: string
+  name: string
+  points: number
+  avatar?: string
+  rank: number
+  isCurrentUser?: boolean
+}
 
 export default function GamificationPage() {
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Mock data
-  const userPoints = {
-    total: 320,
-    level: 3,
-    nextLevel: 400,
-    rank: 5,
+  useEffect(() => {
+    async function loadData() {
+      if (!user?.uid) return
+
+      try {
+        setLoading(true)
+        const [userProfile, leaderboard] = await Promise.all([
+          getUserProfile(user.uid),
+          getLeaderboard(10)
+        ])
+
+        if (userProfile) {
+          setProfile(userProfile)
+          // Get user's rank
+          const rank = await getUserRank(user.uid, userProfile.points)
+          
+          // Add ranks to leaderboard users
+          const usersWithRanks = leaderboard.map((u, index) => ({
+            ...u,
+            rank: index + 1,
+            isCurrentUser: u.id === user.uid
+          }))
+
+          // If user is not in top 10, add them at the end
+          if (!usersWithRanks.some(u => u.id === user.uid)) {
+            usersWithRanks.push({
+              id: user.uid,
+              name: userProfile.name,
+              points: userProfile.points,
+              avatar: userProfile.avatar,
+              rank,
+              isCurrentUser: true
+            })
+          }
+
+          setLeaderboardUsers(usersWithRanks)
+        }
+      } catch (error) {
+        console.error("Error loading profile:", error)
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load profile data. Please try again."
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [user?.uid, toast])
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p>Please sign in to view your civic points and achievements.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
-  const leaderboard = [
-    { id: 1, name: "Rahul Sharma", points: 520, avatar: "/placeholder.svg?height=40&width=40" },
-    { id: 2, name: "Priya Patel", points: 480, avatar: "/placeholder.svg?height=40&width=40" },
-    { id: 3, name: "Amit Deshmukh", points: 450, avatar: "/placeholder.svg?height=40&width=40" },
-    { id: 4, name: "Sneha Joshi", points: 410, avatar: "/placeholder.svg?height=40&width=40" },
-    { id: 5, name: "You", points: 320, avatar: "/placeholder.svg?height=40&width=40", isCurrentUser: true },
-    { id: 6, name: "Vikram Singh", points: 290, avatar: "/placeholder.svg?height=40&width=40" },
-    { id: 7, name: "Neha Kulkarni", points: 260, avatar: "/placeholder.svg?height=40&width=40" },
-  ]
+  if (loading || !profile) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid gap-6 md:grid-cols-3">
+          {[1, 2, 3].map((n) => (
+            <Card key={n} className="md:col-span-1">
+              <CardContent className="p-6">
+                <div className="h-32 w-full animate-pulse rounded-lg bg-muted" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
+  const { level, nextLevel, progress } = calculateLevel(profile.points)
+
+  // Mock data for upcoming drives - In a real app, this would come from the backend
   const upcomingDrives = [
     {
       id: 1,
       title: "Nashik River Cleanup",
-      date: "2023-05-20T09:00:00",
+      date: "2025-05-20T09:00:00",
       location: "Godavari Riverbank, Ramkund",
       participants: 24,
       pointsReward: 50,
@@ -41,36 +126,15 @@ export default function GamificationPage() {
     {
       id: 2,
       title: "Tree Plantation Drive",
-      date: "2023-05-27T08:30:00",
-      location: "Pandavleni Hills",
+      date: "2025-05-25T08:00:00",
+      location: "College Road Green Belt",
       participants: 18,
-      pointsReward: 40,
-    },
-    {
-      id: 3,
-      title: "Road Safety Awareness",
-      date: "2023-06-03T10:00:00",
-      location: "College Road",
-      participants: 12,
       pointsReward: 30,
-    },
+    }
   ]
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat("en-US", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      hour: "numeric",
-      minute: "numeric",
-    }).format(date)
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-6 text-3xl font-bold">{t("gamification")}</h1>
-
       <div className="grid gap-6 md:grid-cols-3">
         {/* User Civic Points */}
         <Card className="md:col-span-1">
@@ -83,30 +147,30 @@ export default function GamificationPage() {
               <div className="relative flex h-32 w-32 items-center justify-center rounded-full bg-primary/10">
                 <Trophy className="h-12 w-12 text-primary" />
                 <div className="absolute -top-2 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                  {userPoints.level}
+                  {level}
                 </div>
               </div>
             </div>
 
             <div className="text-center">
-              <h3 className="text-3xl font-bold">{userPoints.total}</h3>
+              <h3 className="text-3xl font-bold">{profile.points}</h3>
               <p className="text-sm text-muted-foreground">Total Points</p>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span>Level {userPoints.level}</span>
-                <span>Level {userPoints.level + 1}</span>
+                <span>Level {level}</span>
+                <span>Level {level + 1}</span>
               </div>
-              <Progress value={(userPoints.total / userPoints.nextLevel) * 100} className="h-2" />
+              <Progress value={progress} className="h-2" />
               <p className="text-center text-xs text-muted-foreground">
-                {userPoints.nextLevel - userPoints.total} points to next level
+                {nextLevel - profile.points} points to next level
               </p>
             </div>
 
             <div className="rounded-lg bg-muted p-3 text-center">
               <p className="text-sm">
-                City Rank: <span className="font-bold">#{userPoints.rank}</span>
+                City Rank: <span className="font-bold">#{leaderboardUsers.find(u => u.isCurrentUser)?.rank || "N/A"}</span>
               </p>
             </div>
 
@@ -129,7 +193,7 @@ export default function GamificationPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {leaderboard.map((user) => (
+              {leaderboardUsers.map((user) => (
                 <div
                   key={user.id}
                   className={`flex items-center justify-between rounded-lg p-2 ${
@@ -138,7 +202,7 @@ export default function GamificationPage() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-bold">
-                      #{user.id}
+                      #{user.rank}
                     </div>
                     <Avatar>
                       <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
@@ -169,17 +233,22 @@ export default function GamificationPage() {
           <CardContent>
             <div className="space-y-4">
               {upcomingDrives.map((drive) => (
-                <div key={drive.id} className="rounded-lg border p-3 transition-colors hover:bg-accent">
-                  <h3 className="font-medium">{drive.title}</h3>
-                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <div key={drive.id} className="space-y-2 rounded-lg border p-3">
+                  <h3 className="font-semibold">{drive.title}</h3>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3" />
-                    <span>{formatDate(drive.date)}</span>
+                    <span>
+                      {new Date(drive.date).toLocaleDateString(undefined, {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                      })}
+                    </span>
                   </div>
-                  <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="12"
-                      height="12"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
