@@ -17,22 +17,19 @@ export function RecentIssues() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadIssues() {
-      try {
-        setLoading(true)
-        setError(null)
-        const issues = await getAllIssues(5) // Load 5 most recent issues
-        setRecentIssues(issues)
-      } catch (err) {
-        console.error("Error loading issues:", err)
-        setError("Failed to load recent issues")
-      } finally {
+    setLoading(true)
+    getAllIssues()
+      .then((issues) => {
+        setRecentIssues(issues.slice(0, 5)) // Show 5 most recent issues
         setLoading(false)
-      }
-    }
-
-    loadIssues()
+        setError(null)
+      })
+      .catch((err) => {
+        setError(err.message || "Failed to load issues")
+        setLoading(false)
+      })
   }, [])
+
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "open":
@@ -45,6 +42,7 @@ export function RecentIssues() {
         return "secondary"
     }
   }
+
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en-US", {
       day: "numeric",

@@ -123,30 +123,41 @@ export async function updateIssueStatus(
   comment: string,
   images?: string[]
 ) {
+  await checkOnlineStatus()
+  
   const issueRef = doc(db, "issues", issueId)
   const now = new Date() // Use regular Date object for array operations
   const serverNow = serverTimestamp() // Use serverTimestamp for top-level fields
 
   const updateData: any = {
     status,
-    ...(status === "resolved" ? { resolvedOn: serverNow } : {}),
+    lastUpdated: serverNow,
+    ...(status === "resolved" ? { resolvedOn: serverNow } : { resolvedOn: null }),
     ...(images ? { images } : {})
   }
 
   try {
+    // Update the issue document
     await updateDoc(issueRef, {
       ...updateData,
-      [`updates`]: arrayUnion({
-        date: now, // Use regular Date for array operation
+      updates: arrayUnion({
+        date: now,
         status,
         comment
       })
     })
+
+    // Get the updated issue to return with proper date objects
+    const updatedIssue = await getIssueById(issueId)
+    return updatedIssue
   } catch (error: any) {
     if (error.code === 'failed-precondition' || error.code === 'unavailable') {
       throw new Error("Unable to update issue while offline")
     }
-    throw error
+    if (error.code === 'permission-denied') {
+      throw new Error('You do not have permission to update this issue.')
+    }
+    throw new Error('Failed to update issue status. Please try again.')
   }
 }
 

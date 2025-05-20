@@ -11,14 +11,19 @@ service cloud.firestore {
         // Only allow querying by points for leaderboard
         (request.query.orderBy == "points" || 
          request.query.orderBy == null);
-    }// Allow authenticated users to create issues and anyone to read them
+    }    // Allow authenticated users to create issues and anyone to read them
     match /issues/{issueId} {
-      allow read: if true;
+      allow read: if true;  // Public read access for issues
+      allow list: if true;  // Allow listing issues for real-time updates
       allow create: if request.auth != null;
       allow update: if request.auth != null && (
-        // Allow any authenticated user to update issues
-        // In a production app, you might want to add more specific rules
-        true
+        // Allow authenticated users to update issues with appropriate fields
+        // Ensure critical fields aren't modified maliciously
+        (!request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['userId', 'reportedOn', 'reportedBy', 'type'])) &&
+        // Allow updating status, images, and comments
+        (request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'images', 'updates', 'resolvedOn', 'verified', 'lastUpdated']))
       );
       allow delete: if request.auth != null && (
         // Allow users to delete their own issues
