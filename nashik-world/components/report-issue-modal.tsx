@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { AlertTriangle, Camera, MapPin, Mic, X, ChevronRight, ChevronLeft, Upload, Check, LinkIcon } from "lucide-react"
+import { AlertTriangle, Camera, MapPin, Mic, X, ChevronRight, ChevronLeft, Upload, Check, LinkIcon, Bus } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,6 +16,9 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { IssueType, IssueStatus } from "@/types/issue"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 type ReportIssueModalProps = {
   isOpen: boolean
@@ -27,6 +30,8 @@ type IssueCategory = {
   name: string
   icon: React.ReactNode
 }
+
+type BusIssueCategory = "Driver Misbehavior" | "Bus Not On Time" | "Bus Didn't Stop" | "Overcrowding" | "Vehicle Condition" | "Other"
 
 export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
   const { t } = useTranslation()
@@ -42,6 +47,8 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [transactionId, setTransactionId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [busIssueCategory, setBusIssueCategory] = useState<BusIssueCategory | "">("")
+  const [busNumber, setBusNumber] = useState("")
 
   const categories: IssueCategory[] = [
     {
@@ -90,6 +97,15 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
       ),
     },
     {
+      id: "busService",
+      name: t("busService"),
+      icon: (
+        <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+          <Bus className="h-6 w-6 text-indigo-600" />
+        </div>
+      )
+    },
+    {
       id: "other",
       name: "Other",
       icon: (
@@ -107,6 +123,12 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
         title: "Error",
         description: "Please sign in to report an issue"
       })
+      return
+    }
+
+    // For bus service, skip to preview from step 2
+    if (selectedCategory === 'busService' && step === 2) {
+      setStep(4)
       return
     }
 
@@ -139,10 +161,15 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
         }
       }
 
+      let finalDescription = description;
+      if (selectedCategory === 'busService') {
+        finalDescription = `Bus Issue: ${busIssueCategory}. Bus Number: ${busNumber || 'N/A'}. Description: ${description}`;
+      }
+
       // Create the issue with all data at once
       const issue = await createIssue(user.uid, {
         type: selectedCategory as IssueType,
-        description,
+        description: finalDescription,
         location: address,
         coordinates: location!,
         status: "open",
@@ -173,6 +200,8 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
         setUploadedImage(null)
         setImageFile(null)
         setTransactionId(null)
+        setBusIssueCategory("")
+        setBusNumber("")
       }, 3000)
 
     } catch (error) {
@@ -259,6 +288,9 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
       case 1:
         return !selectedCategory
       case 2:
+        if (selectedCategory === "busService") {
+          return !busIssueCategory || !description
+        }
         return !location
       case 3:
         return !description
@@ -267,57 +299,10 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
     }
   }
 
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl">
-            {step === 4 && transactionId ? "Issue Reported Successfully!" : t("reportIssue")}
-          </DialogTitle>
-        </DialogHeader>
-
-        {/* Step indicator */}
-        {!transactionId && (
-          <div className="flex justify-between mb-6">
-            {[1, 2, 3, 4].map((s) => (
-              <div
-                key={s}
-                className={cn(
-                  "flex items-center justify-center h-8 w-8 rounded-full text-sm font-medium",
-                  step === s
-                    ? "bg-primary text-primary-foreground"
-                    : step > s
-                      ? "bg-primary/20 text-primary"
-                      : "bg-muted text-muted-foreground",
-                )}
-              >
-                {s}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Step content */}
-        {transactionId ? (
-          <div className="flex flex-col items-center py-6">
-            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-              <Check className="h-8 w-8 text-green-600" />
-            </div>
-            <p className="text-center mb-4">
-              Your issue has been reported successfully and will be reviewed by the authorities.
-            </p>
-            <div className="bg-muted p-3 rounded-md w-full mb-4">
-              <p className="text-sm font-medium mb-1">Transaction ID (Blockchain):</p>
-              <div className="flex items-center gap-2">
-                <code className="text-xs bg-background p-2 rounded w-full overflow-x-auto">{transactionId}</code>
-                <Button variant="ghost" size="icon" className="flex-shrink-0">
-                  <LinkIcon className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">+10 Civic Points Earned</Badge>
-          </div>
-        ) : step === 1 ? (
+  const renderStepContent = () => {
+    switch(step) {
+      case 1:
+        return (
           <div>
             <h3 className="font-medium mb-4">{t("selectCategory") || "Select Category"}</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -389,7 +374,46 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
               </div>
             )}
           </div>
-        ) : step === 2 ? (
+        )
+      case 2:
+        if (selectedCategory === 'busService') {
+          return (
+            <div className="space-y-4">
+              <div>
+                <Label>Bus Issue Category</Label>
+                <Select onValueChange={(value) => setBusIssueCategory(value as BusIssueCategory)}>
+                  <SelectTrigger><SelectValue placeholder="Select issue type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Driver Misbehavior">Driver Misbehavior</SelectItem>
+                    <SelectItem value="Bus Not On Time">Bus Not On Time</SelectItem>
+                    <SelectItem value="Bus Didn't Stop">Bus Didn't Stop</SelectItem>
+                    <SelectItem value="Overcrowding">Overcrowding</SelectItem>
+                    <SelectItem value="Vehicle Condition">Vehicle Condition</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Bus Number (Optional)</Label>
+                <Input 
+                  placeholder="e.g., MH-15-1234 or 101"
+                  value={busNumber}
+                  onChange={(e) => setBusNumber(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Textarea 
+                  placeholder={t("describeTheIssue")} 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                />
+              </div>
+            </div>
+          )
+        }
+        return (
           <div>
             <h3 className="font-medium mb-4">{t("location")}</h3>
 
@@ -422,7 +446,9 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
 
             <p className="text-xs text-muted-foreground mt-2">Drag the pin to adjust the exact location if needed</p>
           </div>
-        ) : step === 3 ? (
+        )
+      case 3:
+        return (
           <div>
             <h3 className="font-medium mb-4">{t("description")}</h3>
 
@@ -457,7 +483,9 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
               </TabsContent>
             </Tabs>
           </div>
-        ) : (
+        )
+      default:
+        return (
           <div>
             <h3 className="font-medium mb-4">{t("preview") || "Preview"}</h3>
 
@@ -500,7 +528,61 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
               </div>
             </div>
           </div>
+        )
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl">
+            {step === 4 && transactionId ? "Issue Reported Successfully!" : t("reportIssue")}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Step indicator */}
+        {!transactionId && (
+          <div className="flex justify-between mb-6">
+            {[1, 2, 3, 4].map((s) => (
+              <div
+                key={s}
+                className={cn(
+                  "flex items-center justify-center h-8 w-8 rounded-full text-sm font-medium",
+                  step === s
+                    ? "bg-primary text-primary-foreground"
+                    : step > s
+                      ? "bg-primary/20 text-primary"
+                      : "bg-muted text-muted-foreground",
+                )}
+              >
+                {s}
+              </div>
+            ))}
+          </div>
         )}
+
+        {/* Step content */}
+        {transactionId ? (
+          <div className="flex flex-col items-center py-6">
+            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+              <Check className="h-8 w-8 text-green-600" />
+            </div>
+            <p className="text-center mb-4">
+              Your issue has been reported successfully and will be reviewed by the authorities.
+            </p>
+            <div className="bg-muted p-3 rounded-md w-full mb-4">
+              <p className="text-sm font-medium mb-1">Transaction ID (Blockchain):</p>
+              <div className="flex items-center gap-2">
+                <code className="text-xs bg-background p-2 rounded w-full overflow-x-auto">{transactionId}</code>
+                <Button variant="ghost" size="icon" className="flex-shrink-0">
+                  <LinkIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">+10 Civic Points Earned</Badge>
+          </div>
+        ) : renderStepContent()}
 
         <DialogFooter className="flex justify-between">
           {!transactionId && (
@@ -512,8 +594,8 @@ export function ReportIssueModal({ isOpen, onClose }: ReportIssueModalProps) {
                 </Button>
               )}
               <Button onClick={handleNext} disabled={isNextDisabled()} className={step === 1 ? "ml-auto" : ""}>
-                {step === 4 ? t("submit") : t("next") || step === 4 ? "Submit" : "Next"}
-                {step < 4 && <ChevronRight className="h-4 w-4 ml-2" />}
+                {step === 4 || (step === 2 && selectedCategory === 'busService') ? t("submit") : t("next") || step === 4 ? "Submit" : "Next"}
+                {step < 4 && !(step === 2 && selectedCategory === 'busService') && <ChevronRight className="h-4 w-4 ml-2" />}
               </Button>
             </>
           )}

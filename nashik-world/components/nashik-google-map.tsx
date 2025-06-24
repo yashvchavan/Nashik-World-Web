@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { Filter, X, MapPin, AlertTriangle, Droplets, Trash2, Tree, Lightbulb, Zap } from "lucide-react"
+import { Filter, X, MapPin, AlertTriangle, Droplets, Trash2, Trees, Lightbulb, Zap } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { subscribeToIssues } from "@/lib/issues"
 import type { Issue, IssueType, IssueStatus, IssueUrgency, IssueUpdate } from "@/types/issue"
@@ -178,11 +178,11 @@ function MapComponent({ issues, onIssueSelect, center }: { issues: MapIssue[], o
 const render = (status: Status) => {
   switch (status) {
     case Status.LOADING:
-      return <div className="w-full h-[500px] rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">Loading map...</div>
+      return <div>Loading map...</div>
     case Status.FAILURE:
-      return <div className="w-full h-[500px] rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">Error loading map</div>
+      return <div>Error loading map</div>
     default:
-      return null
+      return <div />
   }
 }
 
@@ -204,6 +204,7 @@ export function NashikGoogleMap({ filteredIssues, showFilters = true, className 
       fallenTree: true,
       streetlight: true,
       disaster: true,
+      busService: true,
     },
     status: "all" as "all" | IssueStatus,
     urgency: "all" as "all" | IssueUrgency,
@@ -245,6 +246,9 @@ export function NashikGoogleMap({ filteredIssues, showFilters = true, className 
   }
 
   const finalFilteredIssues = issues.filter((issue) => {
+    if (!issue.coordinates || issue.coordinates.lat == null || issue.coordinates.lng == null) {
+      return false
+    }
     if (issue.type !== "other" && !filters.categories[issue.type]) {
       return false
     }

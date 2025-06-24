@@ -2,13 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {    // Allow users to read and write their own profile, and allow leaderboard queries
     match /users/{userId} {
-      allow read: if request.auth != null;  // Allow authenticated users to read any profile for leaderboard
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId;
-      
-      // Add rule to allow listing users for leaderboard
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
       allow list: if request.auth != null &&
-        // Only allow querying by points for leaderboard
         (request.query.orderBy == "points" || 
          request.query.orderBy == null);
     }    // Allow authenticated users to create issues and anyone to read them
@@ -16,18 +12,9 @@ service cloud.firestore {
       allow read: if true;  // Public read access for issues
       allow list: if true;  // Allow listing issues for real-time updates
       allow create: if request.auth != null;
-      allow update: if request.auth != null && (
-        // Allow authenticated users to update issues with appropriate fields
-        // Ensure critical fields aren't modified maliciously
-        (!request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['userId', 'reportedOn', 'reportedBy', 'type'])) &&
-        // Allow updating status, images, and comments
-        (request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['status', 'images', 'updates', 'resolvedOn', 'verified', 'lastUpdated']))
-      );
-      allow delete: if request.auth != null && (
-        // Allow users to delete their own issues
-        resource.data.userId == request.auth.uid
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
       
       // Allow read/write access to comments subcollection
@@ -45,6 +32,16 @@ service cloud.firestore {
     match /stats/{document=**} {
       allow read: if true;
       allow write: if false;
+    }
+
+    match /drives/{driveId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.organizer.userId ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
   }
 }

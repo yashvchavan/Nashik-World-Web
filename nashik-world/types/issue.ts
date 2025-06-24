@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase/firestore"
 
-export type IssueType = "pothole" | "waterLeak" | "garbage" | "fallenTree" | "streetlight" | "disaster" | "other"
+export type IssueType = "pothole" | "waterLeak" | "garbage" | "fallenTree" | "streetlight" | "disaster" | "busService" | "other"
 export type IssueStatus = "open" | "inProgress" | "resolved"
 export type IssueUrgency = "low" | "medium" | "high"
 

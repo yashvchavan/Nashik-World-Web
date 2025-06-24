@@ -7,62 +7,37 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ResolutionTimeline } from "@/components/resolution-timeline"
+import { useEffect, useState } from "react"
+import { collection, getDocs } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import type { Issue } from "@/types/issue"
 
 export default function TransparencyPage() {
   const { t } = useTranslation()
+  const [issues, setIssues] = useState<Issue[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Mock data
-  const issues = [
-    {
-      id: 1,
-      type: "pothole",
-      location: "Gangapur Road, near City Center Mall",
-      status: "open",
-      reportedOn: "2023-05-10T10:30:00",
-      assignedTo: "Road Department",
-      estimatedResolution: "2023-05-15",
-    },
-    {
-      id: 2,
-      type: "waterLeak",
-      location: "College Road, opposite ABB Circle",
-      status: "inProgress",
-      reportedOn: "2023-05-09T14:15:00",
-      assignedTo: "Water Department",
-      estimatedResolution: "2023-05-14",
-      startedOn: "2023-05-10T09:00:00",
-    },
-    {
-      id: 3,
-      type: "fallenTree",
-      location: "Mahatma Nagar, near Sharanpur Road",
-      status: "resolved",
-      reportedOn: "2023-05-08T09:45:00",
-      assignedTo: "Garden Department",
-      estimatedResolution: "2023-05-12",
-      startedOn: "2023-05-08T14:00:00",
-      resolvedOn: "2023-05-11T16:30:00",
-    },
-    {
-      id: 4,
-      type: "garbage",
-      location: "Ashok Stambh, near Old CBS",
-      status: "open",
-      reportedOn: "2023-05-07T16:20:00",
-      assignedTo: "Sanitation Department",
-      estimatedResolution: "2023-05-13",
-    },
-    {
-      id: 5,
-      type: "streetlight",
-      location: "Satpur MIDC, near Ambad Link Road",
-      status: "inProgress",
-      reportedOn: "2023-05-06T11:10:00",
-      assignedTo: "Electrical Department",
-      estimatedResolution: "2023-05-12",
-      startedOn: "2023-05-07T10:00:00",
-    },
-  ]
+  useEffect(() => {
+    async function fetchIssues() {
+      setLoading(true)
+      const querySnapshot = await getDocs(collection(db, "issues"))
+      const issuesData = querySnapshot.docs.map(doc => {
+        const data = doc.data()
+        // Convert Firestore Timestamps to JS Dates for Issue type
+        return {
+          id: doc.id,
+          ...data,
+          reportedOn: data.reportedOn?.toDate ? data.reportedOn.toDate() : data.reportedOn,
+          resolvedOn: data.resolvedOn?.toDate ? data.resolvedOn.toDate() : data.resolvedOn,
+          estimatedResolution: data.estimatedResolution?.toDate ? data.estimatedResolution.toDate() : data.estimatedResolution,
+          updates: data.updates?.map((u: any) => ({ ...u, date: u.date?.toDate ? u.date.toDate() : u.date })) ?? [],
+        } as Issue
+      })
+      setIssues(issuesData)
+      setLoading(false)
+    }
+    fetchIssues()
+  }, [])
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -127,8 +102,8 @@ export default function TransparencyPage() {
                           <Badge variant={getStatusBadgeVariant(issue.status) as any}>{t(issue.status)}</Badge>
                         </TableCell>
                         <TableCell>{issue.assignedTo}</TableCell>
-                        <TableCell>{formatDate(issue.reportedOn)}</TableCell>
-                        <TableCell>{formatDate(issue.estimatedResolution)}</TableCell>
+                        <TableCell>{formatDate(typeof issue.reportedOn === 'string' ? issue.reportedOn : (issue.reportedOn ? issue.reportedOn.toISOString() : ''))}</TableCell>
+                        <TableCell>{issue.estimatedResolution ? formatDate(typeof issue.estimatedResolution === 'string' ? issue.estimatedResolution : issue.estimatedResolution.toISOString()) : '-'}</TableCell>
                         <TableCell>
                           <Button asChild size="sm" variant="outline">
                             <a href={`/dashboard/issue/${issue.id}`}>{t("viewDetails")}</a>

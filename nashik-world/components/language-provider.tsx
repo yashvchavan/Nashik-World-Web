@@ -31,6 +31,11 @@ const translations: Translations = {
     hi: "पारदर्शिता",
     mr: "पारदर्शकता",
   },
+  communityDrives: {
+    en: "Community Drives",
+    hi: "सामुदायिक अभियान",
+    mr: "सामुदायिक उपक्रम",
+  },
   gamification: {
     en: "Civic Points",
     hi: "नागरिक अंक",

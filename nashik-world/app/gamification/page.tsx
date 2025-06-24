@@ -13,6 +13,7 @@ import { getUserProfile, getLeaderboard, getUserRank } from "@/lib/user"
 import { calculateLevel } from "@/lib/constants"
 import { useToast } from "@/components/ui/use-toast"
 import type { UserProfile } from "@/types/user"
+import { getUpcomingDrives } from "@/lib/drives"
 
 interface LeaderboardUser {
   id: string
@@ -30,6 +31,8 @@ export default function GamificationPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [upcomingDrives, setUpcomingDrives] = useState<any[]>([])
+  const [drivesLoading, setDrivesLoading] = useState(true)
 
   useEffect(() => {
     async function loadData() {
@@ -37,9 +40,10 @@ export default function GamificationPage() {
 
       try {
         setLoading(true)
-        const [userProfile, leaderboard] = await Promise.all([
+        const [userProfile, leaderboard, drives] = await Promise.all([
           getUserProfile(user.uid),
-          getLeaderboard(10)
+          getLeaderboard(10),
+          getUpcomingDrives()
         ])
 
         if (userProfile) {
@@ -67,6 +71,8 @@ export default function GamificationPage() {
           }
 
           setLeaderboardUsers(usersWithRanks)
+          setUpcomingDrives(drives)
+          setDrivesLoading(false)
         }
       } catch (error) {
         console.error("Error loading profile:", error)
@@ -75,6 +81,7 @@ export default function GamificationPage() {
           title: "Error",
           description: "Failed to load profile data. Please try again."
         })
+        setDrivesLoading(false)
       } finally {
         setLoading(false)
       }
@@ -112,26 +119,6 @@ export default function GamificationPage() {
   }
 
   const { level, nextLevel, progress } = calculateLevel(profile.points)
-
-  // Mock data for upcoming drives - In a real app, this would come from the backend
-  const upcomingDrives = [
-    {
-      id: 1,
-      title: "Nashik River Cleanup",
-      date: "2025-05-20T09:00:00",
-      location: "Godavari Riverbank, Ramkund",
-      participants: 24,
-      pointsReward: 50,
-    },
-    {
-      id: 2,
-      title: "Tree Plantation Drive",
-      date: "2025-05-25T08:00:00",
-      location: "College Road Green Belt",
-      participants: 18,
-      pointsReward: 30,
-    }
-  ]
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -231,20 +218,28 @@ export default function GamificationPage() {
             <CardDescription>Join and earn extra points</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {upcomingDrives.map((drive) => (
+            {drivesLoading ? (
+              <div className="space-y-2">
+                {[1,2].map(n => (
+                  <div key={n} className="h-24 rounded-lg bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : upcomingDrives.length === 0 ? (
+              <p className="text-muted-foreground">No upcoming drives.</p>
+            ) : (
+              upcomingDrives.map((drive) => (
                 <div key={drive.id} className="space-y-2 rounded-lg border p-3">
                   <h3 className="font-semibold">{drive.title}</h3>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     <span>
-                      {new Date(drive.date).toLocaleDateString(undefined, {
+                      {drive.date ? new Date(drive.date).toLocaleDateString(undefined, {
                         weekday: "short",
                         month: "short",
                         day: "numeric",
                         hour: "numeric",
                         minute: "numeric",
-                      })}
+                      }) : "No date"}
                     </span>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -265,16 +260,16 @@ export default function GamificationPage() {
                   <div className="mt-3 flex items-center justify-between">
                     <div className="flex items-center gap-1 text-xs">
                       <Users className="h-3 w-3" />
-                      <span>{drive.participants} joined</span>
+                      <span>{drive.participantCount} joined</span>
                     </div>
-                    <Badge>+{drive.pointsReward} pts</Badge>
+                    <Badge>+{drive.pointsReward || 0} pts</Badge>
                   </div>
                   <Button size="sm" className="mt-3 w-full">
                     Join Drive
                   </Button>
                 </div>
-              ))}
-            </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>

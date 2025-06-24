@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Home, AlertTriangle, BarChart3, Map, Trophy, User, LogOut, LogIn } from "lucide-react"
+import { Home, AlertTriangle, BarChart3, Map, Trophy, User, LogOut, LogIn, HeartHandshake, Users } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
 import { useAuth } from "@/components/auth-provider"
 import { AuthDialog } from "@/components/auth-dialog"
@@ -33,6 +33,7 @@ export function AppSidebar() {
     { href: "/report", label: t("reportIssue"), icon: AlertTriangle },
     { href: "/dashboard", label: t("issueDashboard"), icon: Map },
     { href: "/transparency", label: t("transparencyDashboard"), icon: BarChart3 },
+    { href: "/drives", label: t("communityDrives"), icon: Users },
     { href: "/gamification", label: t("gamification"), icon: Trophy },
     ...(user ? [{ href: "/profile", label: t("profile"), icon: User }] : []),
   ]

@@ -46,6 +46,7 @@ export function HomeIssueMap() {
       fallenTree: true,
       streetlight: true,
       disaster: true,
+      busService: true,
     },
     status: "all" as "all" | IssueStatus,
     urgency: "all" as "all" | IssueUrgency,
@@ -76,6 +77,9 @@ export function HomeIssueMap() {
   }
 
   const filteredIssues = issues.filter((issue) => {
+    if (!issue.coordinates || issue.coordinates.lat == null || issue.coordinates.lng == null) {
+      return false
+    }
     if (issue.type !== "other" && !filters.categories[issue.type]) {
       return false
     }
