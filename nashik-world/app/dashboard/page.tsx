@@ -10,7 +10,7 @@ import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Filter, List, Map, Search } from "lucide-react"
-import { IssueMap } from "@/components/issue-map"
+import { NashikGoogleMap } from "@/components/nashik-google-map"
 import { subscribeToIssues } from "@/lib/issues"
 import type { Issue } from "@/types/issue"
 import Link from "next/link"
@@ -268,7 +268,7 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : (
-        <IssueMap issues={filteredIssues} />
+        <NashikGoogleMap filteredIssues={filteredIssues} showFilters={false} />
       )}
     </div>
   )

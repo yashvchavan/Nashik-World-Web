@@ -23,6 +23,7 @@ import { DeleteIssueDialog } from "@/components/delete-issue-dialog"
 import type { Issue, IssueStatus, IssueComment } from "@/types/issue"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { NashikGoogleMap } from "@/components/nashik-google-map"
 
 export default function IssueDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { t } = useTranslation()
@@ -420,16 +421,11 @@ export default function IssueDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
               )}
 
-              <div>
-                <h3 className="mb-2 font-medium">Location</h3>
-                <div className="h-48 overflow-hidden rounded-md border bg-muted">
-                  <div className="flex h-full items-center justify-center">
-                    <p className="text-center text-sm text-muted-foreground">
-                      Map showing location at {issue.coordinates?.lat.toFixed(4)}, {issue.coordinates?.lng.toFixed(4)}
-                    </p>
-                  </div>
+              {issue.coordinates && (
+                <div className="h-64 overflow-hidden rounded-md border bg-muted my-4">
+                  <NashikGoogleMap filteredIssues={[issue]} showFilters={false} className="h-64" />
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 

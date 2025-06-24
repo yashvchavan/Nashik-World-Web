@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { IssueStats } from "@/components/issue-stats"
 import { RecentIssues } from "@/components/recent-issues"
-import { HomeIssueMap } from "@/components/home-issue-map"
+import { NashikGoogleMap } from "@/components/nashik-google-map"
 
 export default function Home() {
   const { t } = useTranslation()
@@ -38,8 +38,8 @@ export default function Home() {
 
       {/* Issue Map Section */}
       <section className="mb-12">
-        <h2 className="mb-6 text-2xl font-bold">Issue Map</h2>
-        <HomeIssueMap />
+        <h2 className="mb-6 text-2xl font-bold">Nashik Civic Issues Map</h2>
+        <NashikGoogleMap />
       </section>
 
       {/* Features Section */}
