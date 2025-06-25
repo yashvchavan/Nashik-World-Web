@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { Home, AlertTriangle, BarChart3, Map, Trophy, User, LogOut, LogIn, HeartHandshake, Users } from "lucide-react"
 import { useTranslation } from "@/components/language-provider"
 import { useAuth } from "@/components/auth-provider"
@@ -42,10 +43,8 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="flex items-center justify-between p-4">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary">
-            <AlertTriangle className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold">NashikFix</span>
+          <Image src="/logo.png" alt="NashikFix Logo" width={200} height={200} />
+          
         </Link>
         <SidebarTrigger className="md:hidden" />
       </SidebarHeader>
