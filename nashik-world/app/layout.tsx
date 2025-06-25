@@ -6,7 +6,7 @@ import { RootLayoutClient } from "./layout-client"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "NashikFix - Report Civic Issues",
+  title: "NashikWorld - Report Civic Issues",
   description: "A platform for citizens of Nashik to report and track civic issues",
 }
 
